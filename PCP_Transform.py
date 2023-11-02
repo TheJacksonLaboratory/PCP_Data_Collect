@@ -1,33 +1,34 @@
 import collections
 import os
 import collections
-import logging
-import sys
 from pathlib import Path
-import requests
 import pandas as pd
-import mysql.connector as mysql
-import datetime
-import json
-from base64 import b64encode
 import os
-import re
-import yaml
+import sys
+import optparse
+
 
 """
 Algorithm:
+
+Parse and collect data from .txt file of PCP raw data, output a .csv file.
 
 1. Group files based on its name, for example, 1-P.txt should be grouped with 1-S.txt
 2. Extract data from a tuple/group of files(use different approach based on S/P file)
 3. Merge all extracted data into one big excel/csv file
 
-TODO 09/29/2023
+Usage eg:  python PCP_Transform.py path/to/your/work/directory outputfilename   
 
-1. Find a way to get line number of errors
-2. Add logger to script
+UI: 
+    1. dialog -> select the working folder -> ask for Customized filename, e.g. 
+    
+TODO:
+    1. Implement for saving the file into the working directory (network drive)
 """
 
 """Utility functions"""
+
+
 def get_file_extension(filename: str):
     return Path(filename).suffix.lower()
 
@@ -49,55 +50,6 @@ def tuple_to_dict(list_of_tuple: list[tuple], d: dict) -> dict:
         d.setdefault(x, []).append(y)
     return d
 
-
-def basic_auth(az_username, access_token):
-    token = b64encode(f"{az_username}:{access_token}".encode('utf-8')).decode("ascii")
-    return f'Basic {token}'
-
-
-# Function to create a new PBI on Azure DevOps board
-def create_work_item(message: str, az_username:str):
-    url = "https://dev.azure.com/jacksonlaboratory/teams/_apis/wit/workitems/$Bug?api-version=7.0"
-    payload = json.dumps(
-        [
-            {
-                "op": "add",
-                "path": "/fields/System.Title",
-                "from": None,
-                "value": "Errors detected in PCP data collecting"
-            },
-            {
-                "op": "add",
-                "path": "/fields/System.State",
-                "from": None,
-                "value": "New"
-            },
-            {
-                "op": "add",
-                "path": "/fields/System.History",
-                "from": None,
-                "value": message
-            },
-            {
-                "op": "add",
-                "path": "/fields/System.AssignedTo",
-                "from": None,
-                "value": az_username
-            },
-            {
-                "op": "add",
-                "path": "/fields/System.AreaPath",
-                "from": None,
-                "value": "Teams\\Research\\KOMP"
-            }
-        ]
-    )
-    headers = {
-        'Content-Type': 'application/json-patch+json',
-        'Authorization': basic_auth(),
-    }
-    response = requests.request("POST", url, headers=headers, data=payload)
-    print(response.status_code)
 
 
 def get_first_five_cols(lines: list[str], num_rows: int) -> pd.DataFrame:
@@ -151,7 +103,7 @@ def organize_files(path: str) -> dict:
 
 
 # Function to read data from files
-def parse_file(filename, file_type) -> pd.DataFrame:
+def parse_file(filename, file_type, workspace) -> pd.DataFrame:
     os.chdir(workspace)
 
     with open(filename, "r", encoding='utf-8',
@@ -182,7 +134,7 @@ def parse_file(filename, file_type) -> pd.DataFrame:
             return res
 
 
-def transform(file_groups: dict) -> list[pd.DataFrame]:
+def transform(file_groups: dict, workspace, outputFileName) -> None:
     if not file_groups:
         return []
 
@@ -191,23 +143,51 @@ def transform(file_groups: dict) -> list[pd.DataFrame]:
         files = sorted(files, key=get_filed_sub)
         p_file, s_file = files[0], files[1]
 
-        # Read and aggregate data from files
-        df_1 = parse_file(p_file, "P")
-        df_2 = parse_file(s_file, "S")
+        # Read and aggregate data
+        df_1 = parse_file(p_file, "P", workspace)
+        df_2 = parse_file(s_file, "S", workspace)
         df = pd.concat([df_1, df_2], ignore_index=True)
         result.append(df)
 
-    # Write data to
+    # Write data to the file
     final_data = pd.concat(result, ignore_index=True)
     final_data.to_csv(outputFileName)
 
 
-if __name__ == "__main__":
-    workspace = sys.argv[1]
-    outputFileName = sys.argv[2]
-    #path = "/Users/chent/Desktop/KOMP_Project/PCP_ERG_data_compilation/data/test1"
 
-    # Collect data from files
+def main():
+
+    #Parse the coomand line argument
+    parser = optparse.OptionParser()
+    parser.add_option('-d', dest = 'directory',
+                      type = 'str', 
+                      help = 'path to the directory you want to work with')
+    parser.add_option('-f', dest = 'filename',
+                      type = 'str', 
+                      help = 'desired name of your outputfile, be sure to include .csv at the end')
+
+    options, args = parser.parse_args() 
+    if (options.directory == None):
+        print("You must provide a work directory.")
+        print(parser.usage)
+        exit(0)
+
+    if (options.filename == None):
+        print("You must provide a work directory.")
+        print(parser.usage)
+        exit(0)
+        
+    workspace = options.directory
+    outputFileName = options.filename
+
+     # Collect data from files
     file_groups = organize_files(path=workspace)
-    extracted_data = transform(file_groups=file_groups)
+    transform(file_groups=file_groups, workspace=workspace, outputFileName=outputFileName)
     print("Process finished")
+    
+
+if __name__ == "__main__":
+    main()
+
+   
+    
