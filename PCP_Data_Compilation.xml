@@ -5,8 +5,8 @@
     </command>
 
     <inputs>
-        <param format="txt" param name="input1" type="data" multiple="True" label="Select lines from"/>
-        <param format="txt" param name="out_filename" type="data" multiple="True" label="Output Filename"/>
+        <param format="txt" param name="input1" type="data" label="Input your working directory"/>
+        <param format="txt" param name="out_filename" type="data" label="Input your output Filename"/>
     </inputs>
 
     <outputs>

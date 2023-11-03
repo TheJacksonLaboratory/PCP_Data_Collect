@@ -4,7 +4,6 @@ import collections
 from pathlib import Path
 import pandas as pd
 import os
-import sys
 import optparse
 
 
@@ -17,13 +16,7 @@ Parse and collect data from .txt file of PCP raw data, output a .csv file.
 2. Extract data from a tuple/group of files(use different approach based on S/P file)
 3. Merge all extracted data into one big excel/csv file
 
-Usage eg:  python PCP_Transform.py path/to/your/work/directory outputfilename   
-
-UI: 
-    1. dialog -> select the working folder -> ask for Customized filename, e.g. 
-    
-TODO:
-    1. Implement for saving the file into the working directory (network drive)
+Usage eg:  python PCP_Transform.py -d path/to/your/work/directory -f outputfilename.csv   
 """
 
 """Utility functions"""
@@ -33,26 +26,29 @@ def get_file_extension(filename: str):
     return Path(filename).suffix.lower()
 
 
-def get_field_prefix(fileName: str) -> str:
+def get_field_prefix(fileName: str):
     return fileName.split("-")[0]
 
 
+#Get type of a file, e.g it's a 'S' file or a 'T' file
 def get_filed_sub(fileName: str) -> str:
     return fileName[2:3]
 
 
-def strip_lines(lines: list[str]) -> list[list]:
+#Function to remove space and tab from a line in the .txt file
+def strip_lines(lines) -> list[list]:
     return [x.strip().split('\t') for x in lines]
+    
 
-
-def tuple_to_dict(list_of_tuple: list[tuple], d: dict) -> dict:
+#Function to convert tuple/pair to a dict
+def tuple_to_dict(list_of_tuple, d):
     for (x, y) in list_of_tuple:
         d.setdefault(x, []).append(y)
     return d
 
 
 
-def get_first_five_cols(lines: list[str], num_rows: int) -> pd.DataFrame:
+def get_first_five_cols(lines: list[str], num_rows: int):
     """
     Function to generate information from the file and generate the first five columns(general information of mice),
     the result is like the following:
@@ -83,7 +79,7 @@ def get_first_five_cols(lines: list[str], num_rows: int) -> pd.DataFrame:
 
 # Function to group files based on their names, e.g 1-P.txt and 1-S.txt will be grouped together because they both
 # have '1' as prefix
-def organize_files(path: str) -> dict:
+def organize_files(path: str):
     if not os.path.isdir(path):
         print(f"{path} is not a directory")
         return {}
@@ -103,7 +99,7 @@ def organize_files(path: str) -> dict:
 
 
 # Function to read data from files
-def parse_file(filename, file_type, workspace) -> pd.DataFrame:
+def parse_file(filename, file_type, workspace):
     os.chdir(workspace)
 
     with open(filename, "r", encoding='utf-8',
@@ -173,7 +169,7 @@ def main():
         exit(0)
 
     if (options.filename == None):
-        print("You must provide a work directory.")
+        print("You must provide a output filename.")
         print(parser.usage)
         exit(0)
         
