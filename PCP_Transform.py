@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import os
 import optparse
+import sys
 
 
 """
@@ -36,7 +37,7 @@ def get_filed_sub(fileName: str) -> str:
 
 
 #Function to remove space and tab from a line in the .txt file
-def strip_lines(lines) -> list[list]:
+def strip_lines(lines):
     return [x.strip().split('\t') for x in lines]
     
 
@@ -48,7 +49,7 @@ def tuple_to_dict(list_of_tuple, d):
 
 
 
-def get_first_five_cols(lines: list[str], num_rows: int):
+def get_first_five_cols(lines, num_rows: int):
     """
     Function to generate information from the file and generate the first five columns(general information of mice),
     the result is like the following:
@@ -150,10 +151,83 @@ def transform(file_groups: dict, workspace, outputFileName) -> None:
     final_data.to_csv(outputFileName)
 
 
+def isPfile(filename):
+    # If line 49 starts with "Summary Table" then it is a P file
+    try:
+        with open(filename, "r", encoding='utf-8',
+                errors='ignore') as f:
+            
+            lines = f.readlines()
+            columns = lines[48].strip().split()
+            return columns[0] == "Summary" and columns[1] == "Table"
+    except Exception:
+            return False
+
+
+def isSfile(filename):
+    # If line 65 starts with "Summary Table" then it is an S file
+    try:
+        with open(filename, "r", encoding='utf-8',
+                errors='ignore') as f:
+            
+            lines = f.readlines()
+            columns = lines[64].strip().split()
+            return columns[0] == "Summary" and columns[1] == "Table"
+    except Exception:
+        return False
+
+def validateFiles(inputFile1, inputFile2):
+    try:
+        f1 = Path(inputFile1)
+        if f1.exists() == False:
+            print("First file in list does not exist.")
+            return False
+        f2 = Path(inputFile2)
+        if f2.exists() == False:
+            print("Second file in list does not exist.")
+            return False
+            
+        if isSfile(inputFile1) == False and isPfile(inputFile1) == False:
+            print("First file has an invalid format")
+            return False
+        if isSfile(inputFile2) == False and isPfile(inputFile2) == False:
+            print("Second file has an invalid format")
+            return False
+    except Exception as e:
+        print(e)
+        return False
+    
+    return True
+
+def transform_galaxy(file1, file2, outputFileName) -> None:
+    
+    if file1 == "" or file2 == "":
+        return None
+
+    if isPfile(file1):
+        df_1 = parse_file(file1, "P", ".")
+        df_2 = parse_file(file2, "S", ".")
+    else:
+        df_1 = parse_file(file2, "P", ".")
+        df_2 = parse_file(file1, "S", ".")
+    
+    result = []
+    
+    # Read and aggregate data
+    df = pd.concat([df_1, df_2], ignore_index=True)
+    result.append(df)
+
+    # Write data to the file
+    final_data = pd.concat(result, ignore_index=True)
+    final_data.to_csv(outputFileName)
+
+
 
 def main():
 
     #Parse the coomand line argument
+    #print(sys.argv)
+    """
     parser = optparse.OptionParser()
     parser.add_option('-d', dest = 'directory',
                       type = 'str', 
@@ -179,7 +253,27 @@ def main():
      # Collect data from files
     file_groups = organize_files(path=workspace)
     transform(file_groups=file_groups, workspace=workspace, outputFileName=outputFileName)
-    print("Process finished")
+    """
+ 
+    if len(sys.argv) < 3:
+        print("Usage: inputfile1 inputFile2 outputFile")
+        print(len(sys.argv))
+        print(sys.argv)
+        exit()
+   
+    #print(sys.argv)
+    inputFiles = sys.argv[1].split(',')
+    
+    inputFile1 = inputFiles[0]
+    inputFile2 = inputFiles[1]
+    outputFile = sys.argv[2]
+
+    #print(inputFile1)
+    #print(inputFile2)
+    #print(outputFile)
+    if validateFiles(inputFile1,inputFile2) == True:
+        transform_galaxy(inputFile1,inputFile2,outputFile)
+    #print("Process finished")
     
 
 if __name__ == "__main__":
