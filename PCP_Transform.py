@@ -122,10 +122,10 @@ def parse_file(filename, file_type, workspace):
             return res
 
         elif file_type == "S":
-            num_rows = len(lines[27:62])
+            num_rows = len(lines[27:63])
             first_five_cols = get_first_five_cols(lines, num_rows)
             # get data in marker's table section
-            temp = strip_lines(lines[27:62])
+            temp = strip_lines(lines[27:63])
             marker_table_data = pd.DataFrame.from_records(temp, columns=columns)
             res = pd.concat([first_five_cols, marker_table_data], axis=1)
             return res
