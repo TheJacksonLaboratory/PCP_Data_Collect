@@ -131,6 +131,31 @@ def parse_file(filename, file_type, workspace):
             return res
 
 
+
+def transform_files(file_list, workspace, outputFileName) -> None:
+
+    if not file_list:
+        return []
+
+    result = []
+    for file in file_list:
+        # Read and aggregate data
+        if isPfile(file):
+            df = parse_file(file, "P", workspace)
+        elif isSfile(file):
+            df = parse_file(file, "S", workspace)
+        else:
+            continue
+
+        result.append(df)
+
+    # Write data to the file
+    final_data = pd.concat(result, ignore_index=True)
+    final_data = final_data.sort_values(by=['Animal # '])
+    final_data.to_csv(outputFileName)
+
+
+
 def transform(file_groups: dict, workspace, outputFileName) -> None:
     if not file_groups:
         return []
@@ -199,30 +224,6 @@ def validateFiles(inputFile1, inputFile2):
     
     return True
 
-def transform_galaxy(file1, file2, outputFileName) -> None:
-    
-    if file1 == "" or file2 == "":
-        return None
-
-    if isPfile(file1):
-        df_1 = parse_file(file1, "P", ".")
-        df_2 = parse_file(file2, "S", ".")
-    else:
-        df_1 = parse_file(file2, "P", ".")
-        df_2 = parse_file(file1, "S", ".")
-    
-    result = []
-    
-    # Read and aggregate data
-    df = pd.concat([df_1, df_2], ignore_index=True)
-    result.append(df)
-
-    # Write data to the file
-    final_data = pd.concat(result, ignore_index=True)
-    final_data.to_csv(outputFileName)
-
-
-
 def main():
 
     #Parse the coomand line argument
@@ -256,25 +257,17 @@ def main():
     """
  
     if len(sys.argv) < 3:
-        print("Usage: inputfile1 inputFile2 outputFile")
+        print("Usage: inputfile1,inputFile2 outputFile")
         print(len(sys.argv))
         print(sys.argv)
         exit()
-   
+
+
     #print(sys.argv)
     inputFiles = sys.argv[1].split(',')
-    
-    inputFile1 = inputFiles[0]
-    inputFile2 = inputFiles[1]
     outputFile = sys.argv[2]
 
-    #print(inputFile1)
-    #print(inputFile2)
-    #print(outputFile)
-    if validateFiles(inputFile1,inputFile2) == True:
-        transform_galaxy(inputFile1,inputFile2,outputFile)
-    #print("Process finished")
-    
+    transform_files(inputFiles, '.', outputFile)
 
 if __name__ == "__main__":
     main()
