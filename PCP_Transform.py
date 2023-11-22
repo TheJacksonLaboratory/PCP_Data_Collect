@@ -226,8 +226,7 @@ def validateFiles(inputFile1, inputFile2):
 
 def main():
 
-    #Parse the coomand line argument
-    #print(sys.argv)
+    #Parse the coomand line argument. This is used in the standalove version. Not in the Galaxy version.
     """
     parser = optparse.OptionParser()
     parser.add_option('-d', dest = 'directory',
@@ -255,15 +254,17 @@ def main():
     file_groups = organize_files(path=workspace)
     transform(file_groups=file_groups, workspace=workspace, outputFileName=outputFileName)
     """
- 
+    # The version that runs on Galaxy takes filenames on the command line.
+    # The filenames are .dat files with munged names for we cannot tell if they are S or P files.
+    # We parse and append the results one file at a time.
+    # argv[1] is the comma separated list filenames.
+    
     if len(sys.argv) < 3:
         print("Usage: inputfile1,inputFile2 outputFile")
         print(len(sys.argv))
         print(sys.argv)
         exit()
 
-
-    #print(sys.argv)
     inputFiles = sys.argv[1].split(',')
     outputFile = sys.argv[2]
 
